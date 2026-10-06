@@ -3,8 +3,12 @@
 The legacy scripts need three public files. **This repository does not
 redistribute any data.** `scripts/00_download_data.R` downloads what it can,
 verifies size and SHA-256, and aborts if a file does not match. Files placed
-in `data/raw/` by hand are verified in the same way. The whole `data/`
-directory is ignored by git.
+in `data/raw/` by hand are verified in the same way. Everything under
+`data/` except this README is ignored by git. Exit codes of the script: 0 when
+all three files are present and verified, 1 when a file does not match its
+expected size or SHA-256 (the script stops with an error), 2 when a file is
+missing. `Rscript scripts/00_download_data.R --verify-only <directory>` only
+verifies the files already present in a directory.
 
 | File | Expected size (bytes) | SHA-256 | Source |
 |---|---|---|---|
@@ -47,8 +51,9 @@ directory is ignored by git.
      cannot be checked against it and `legacy/creacionmatriz.R` would need
      the data written back to the expected CSV layout.
   If a figshare record containing the original files is identified later,
-  set its id in `DEPMAP_FIGSHARE_ARTICLE` (constant in the script or
-  environment variable) and the script will download and verify them.
+  set the environment variable `DEPMAP_FIGSHARE_ARTICLE` to its id (or edit
+  the `unset` default of `Sys.getenv()` in the script) and the script will
+  download and verify them.
 
 ## Derived files
 

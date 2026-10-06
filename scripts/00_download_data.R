@@ -12,6 +12,8 @@
 #           data/raw/DepMap-2019q1-celllines.csv
 # Usage:    Rscript scripts/00_download_data.R
 #           Rscript scripts/00_download_data.R --verify-only <directory>
+# Exit:     0 all files present and verified; 1 size or SHA-256 mismatch
+#           (error); 2 one or more files missing.
 # Depends:  digest, jsonlite (recorded in renv.lock).
 #
 # DepMap source: the two DepMap files belong to the "DepMap Public 19Q1" release.
@@ -92,7 +94,10 @@ figshare_download_urls <- function(article_id, wanted) {
 # ---- arguments --------------------------------------------------------------
 
 args <- commandArgs(trailingOnly = TRUE)
-verify_only <- length(args) >= 2 && args[1] == "--verify-only"
+verify_only <- length(args) >= 1 && args[1] == "--verify-only"
+if (verify_only && (length(args) < 2 || !dir.exists(args[2]))) {
+  stop("Usage: Rscript scripts/00_download_data.R --verify-only <existing directory>", call. = FALSE)
+}
 raw_dir <- if (verify_only) args[2] else file.path("data", "raw")
 if (!verify_only) dir.create(raw_dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -107,7 +112,9 @@ if (!verify_only) {
       next
     }
     if (f$source == "gdsc") {
-      download_to(paste0(GDSC_BASE_URL, f$name), path)
+      if (!isTRUE(download_to(paste0(GDSC_BASE_URL, f$name), path))) {
+        message(sprintf("Download of %s failed; check the network and the GDSC server.", f$name))
+      }
     }
   }
   depmap <- files[files$source == "depmap", ]
@@ -119,7 +126,9 @@ if (!verify_only) {
       urls <- figshare_download_urls(DEPMAP_FIGSHARE_ARTICLE, pending)
       if (!is.null(urls)) {
         for (j in seq_len(nrow(urls))) {
-          download_to(urls$download_url[j], file.path(raw_dir, urls$name[j]))
+          if (!isTRUE(download_to(urls$download_url[j], file.path(raw_dir, urls$name[j])))) {
+            message(sprintf("Download of %s failed; check the network and the figshare record.", urls$name[j]))
+          }
         }
       }
     } else {

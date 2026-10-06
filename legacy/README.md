@@ -32,18 +32,25 @@ Every model script works on one drug at a time: the drug name is set near the
 top of `creacionmatriz.R`, and the hyperparameters chosen in 2019 are written
 by hand in the model scripts. Regression scripts use the AUC as a continuous
 response; classification scripts discretise it at the third quartile. Each
-script fits the models twice, with an 80/20 split (10-fold cross-validation)
-and with a 60/20/20 split.
+script fits the models twice, with an 80/20 split and with a 60/20/20 split
+(hyperparameters tuned on the 20 percent validation subset, final fit on the
+remaining 80 percent, test on the last 20 percent). Cross-validation is used
+inside the training set where the package supports it: 10-fold repeated five
+times in caret, 10-fold in glmnet and in the SVM tuning; the h2o searches use
+training-frame metrics.
 
 ## How the scripts expect to be run
 
 1. Obtain the input files (see `../data/README.md`).
-2. Run the scripts from a working directory that contains the three input
-   files, for example `data/raw/`: first `creacionmatriz.R`, then any of the
-   model scripts. They read and write by relative file name in the working
-   directory (`.rds` matrices and `.RData` fitted models), which git ignores.
-3. Figures and console summaries are produced interactively; nothing is
-   exported to disk by the scripts.
+2. Start R at the project root, so that `renv` is activated by `.Rprofile`
+   (open the `.Rproj` file or run R from that directory), then move to the
+   directory that holds the three input files and source the scripts:
+   `setwd("data/raw"); source("../../legacy/creacionmatriz.R")` first, then
+   any of the model scripts. They read and write by relative file name in the
+   working directory (`.rds` matrices and `.RData` fitted models), which git
+   ignores.
+3. Figures and console summaries are produced interactively; the scripts do
+   not export any figure or table, only the `.rds` and `.RData` files above.
 
 ## Original environment
 
@@ -54,10 +61,15 @@ data.table 1.12.0. The `renv.lock` of this repository records a current
 environment (R 4.3) with newer versions of the same packages, so numeric
 results may differ from the thesis.
 
-**Random partitions.** The scripts call `set.seed()` followed by `sample()`.
-R 3.6.0 changed the default sampling algorithm, so the 2019 partitions are
-only reproduced in R 3.6 or later after calling
-`RNGkind(sample.kind = "Rounding")` before running the scripts.
+**Random partitions.** The 80/20 split uses `caTools::sample.split()`, which
+is not affected by the R 3.6.0 change of the default `sample()` algorithm and
+is reproduced with the same seed. The 60/20/20 split, `createDataPartition()`
+and the internal folds of `cv.glmnet`, caret and `tune` use `sample()` and
+depend both on `sample.kind` and on the random numbers consumed by the fits
+run before them; the h2o searches have no seed and a time budget. Calling
+`RNGkind(sample.kind = "Rounding")` before the scripts is therefore
+necessary but not sufficient to reproduce the 2019 numbers (item 8 of
+`../docs/errata.md`).
 
 **h2o needs Java.** `h2ocontinuosRF.R` and `h2odiscretizadosRF.R` start a
 local h2o server, which requires a Java runtime supported by the installed

@@ -1,10 +1,22 @@
-# Data: never committed (see data/README.md for how to obtain it)
+# Data (never committed; see data/README.md for how to obtain the input files)
 data/*
 !data/README.md
+*.csv
+*.xlsx
+*.part
+
+# Outputs of the legacy scripts (.rds matrices and .RData models, written by relative name in the working directory)
 *.rds
 *.RData
+
 # R session artefacts
 .Rhistory
 .Rproj.user/
+.Renviron
+
 # renv project library (restored from renv.lock)
 renv/library/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below, together with the thesis it comes from."
+type: software
+title: "Drug response prediction in cancer cell lines (GDSC v17.3 and DepMap 19Q1): random forest, penalized regression and linear SVM in R, with reproducible data download, renv environment and errata"
+authors:
+  - family-names: "Esteban Lasso"
+    given-names: "Alfonso"
+    orcid: "https://orcid.org/0009-0006-4029-6178"
+version: "0.1.0"
+date-released: "2026-10-06"
+repository-code: "https://github.com/AlfonsoEstebanLasso/gdsc-depmap-drug-response-r"
+license: MIT
+keywords:
+  - pharmacogenomics
+  - drug response
+  - GDSC
+  - DepMap
+  - random forest
+  - penalized regression
+  - support vector machine
+  - R
+abstract: "Drug response prediction in cancer cell lines (GDSC v17.3 AUC) from gene expression (DepMap 19Q1) with random forest, penalized regression and linear SVM in R. Code of a Master's thesis (MSc in Bioinformatics and Biostatistics, UOC-UB, 2019) published unchanged except for text encoding and a provenance header, with a reproducible data download, a renv environment and a list of errata. Research and teaching only; not a clinical tool."
+references:
+  - type: thesis
+    title: "Predicción de respuesta a fármacos quimioterapéuticos a partir de datos genómicos"
+    authors:
+      - family-names: "Esteban Lasso"
+        given-names: "Alfonso"
+        orcid: "https://orcid.org/0009-0006-4029-6178"
+    thesis-type: "Master's thesis"
+    institution:
+      name: "Universitat Oberta de Catalunya and Universitat de Barcelona"
+    year: 2019
+    url: "https://hdl.handle.net/10609/97486"
+    notes: "Deposited under a CC BY-NC-ND 3.0 ES licence. Linked, not redistributed."

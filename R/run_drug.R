@@ -13,7 +13,8 @@
 # predictions.csv (local only, not committed) and, with the leakage check,
 # leakage_check.csv. Fitted objects are written only with save_models = TRUE.
 #
-# Transformations: outer folds from make_folds() (seed S + t), fold-wise
+# Transformations: outer folds passed by the runner (the table it writes to
+# folds.csv) or, when none is given, from make_folds() (seed S + t); fold-wise
 # preprocessing with preprocess_fold() (gene selection, class threshold and
 # standardisation on the training rows only), inner folds from
 # make_inner_folds() shared by every model family, fit_model() and
@@ -143,7 +144,60 @@ count_selected_genes <- function(genes_list) {
   out[order(-out$times_selected, out$gene), , drop = FALSE]
 }
 
-run_drug <- function(drug, task, matrix, config, outdir) {
+# The outer folds used by run_drug(): the table passed by the caller (the
+# runner builds it once per drug and task, writes it to folds.csv and passes
+# the same object here, so that the saved indices and the evaluated folds
+# cannot diverge) or, when none is given, make_folds() with the seed of
+# section 4.3.
+check_folds <- function(folds, task, cell_lines, config) {
+  needed <- c("row", "cell_line", "repeat", "fold")
+  if (!is.data.frame(folds) || !all(needed %in% names(folds))) {
+    stop("folds must be a data frame with columns row, cell_line, repeat and fold")
+  }
+  fold_task <- attr(folds, "task")
+  if (!is.null(fold_task) && !identical(fold_task, task)) {
+    stop("folds were built for the task ", fold_task, ", not for ", task)
+  }
+  if (!identical(as.character(folds$cell_line), as.character(cell_lines[folds$row]))) {
+    stop("folds do not match the cell lines of the matrix")
+  }
+  if (!setequal(unique(folds[["repeat"]]), seq_len(config$repeats)) ||
+      !setequal(unique(folds$fold), seq_len(config$k))) {
+    stop("folds do not have the repeats and folds of the configuration (k = ",
+         config$k, ", repeats = ", config$repeats, ")")
+  }
+  folds
+}
+
+outer_folds_for <- function(folds, auc, task, config) {
+  if (is.null(folds)) {
+    return(make_folds(auc, k = config$k, repeats = config$repeats, task = task,
+                      seed = config$seed + task_index(task)))
+  }
+  check_folds(folds, task, names(auc), config)
+}
+
+# Numeric columns of predictions.csv are written with 17 significant digits
+# so that the metrics recomputed from the file equal metrics_by_fold.csv
+# (write.csv's default of 15 digits can tie two scores that differ in
+# memory and move a ROC AUC by half a tie step).
+format_full_precision <- function(x) {
+  out <- sprintf("%.17g", x)
+  out[is.na(x)] <- NA_character_
+  out
+}
+
+write_predictions_csv <- function(predictions, path) {
+  out <- predictions
+  numeric_cols <- names(out)[vapply(out, is.numeric, logical(1))]
+  numeric_cols <- setdiff(numeric_cols, c("repeat", "fold"))
+  for (col in numeric_cols) out[[col]] <- format_full_precision(out[[col]])
+  quote_cols <- which(!names(out) %in% c(numeric_cols, "repeat", "fold"))
+  utils::write.csv(out, path, row.names = FALSE, quote = quote_cols)
+  invisible(path)
+}
+
+run_drug <- function(drug, task, matrix, config, outdir, folds = NULL) {
   task <- match.arg(task, c("regression", "classification"))
   drug <- tolower(drug)
   task_dir <- task_dir_of(outdir, drug, task)
@@ -152,10 +206,8 @@ run_drug <- function(drug, task, matrix, config, outdir) {
   x <- matrix$x
   cell_lines <- if (!is.null(matrix$cell_lines)) matrix$cell_lines else rownames(x)
   auc <- stats::setNames(as.numeric(matrix$auc), cell_lines)
-  t_idx <- task_index(task)
 
-  folds <- make_folds(auc, k = config$k, repeats = config$repeats, task = task,
-                      seed = config$seed + t_idx)
+  folds <- outer_folds_for(folds, auc, task, config)
 
   metrics_rows <- list()
   prediction_rows <- list()
@@ -231,7 +283,7 @@ run_drug <- function(drug, task, matrix, config, outdir) {
   write_output_csv(tuning_candidates, file.path(task_dir, "tuning_candidates.csv"))
   write_output_csv(selected_genes, file.path(task_dir, "selected_genes.csv"))
   write_output_csv(timing, file.path(task_dir, "timing.csv"))
-  write_output_csv(predictions, file.path(task_dir, "predictions.csv"))
+  write_predictions_csv(predictions, file.path(task_dir, "predictions.csv"))
 
   leakage_check <- NULL
   if (isTRUE(config$leakage_check)) {
@@ -345,11 +397,30 @@ package_version_line <- function(package) {
   sprintf("  %s %s", package, version)
 }
 
+# sessionInfo() without the machine and location identifiers (operating
+# system build, locale and time zone), which add nothing to reproducibility
+# beyond the R and package versions and would otherwise be committed in a
+# public repository.
+session_info_lines <- function() {
+  lines <- utils::capture.output(print(utils::sessionInfo()))
+  drop <- startsWith(lines, "Running under:") | startsWith(lines, "time zone:") |
+    startsWith(lines, "tzcode source:")
+  in_locale <- FALSE
+  for (i in seq_along(lines)) {
+    if (lines[i] == "locale:") in_locale <- TRUE
+    if (in_locale) {
+      drop[i] <- TRUE
+      if (!nzchar(trimws(lines[i]))) in_locale <- FALSE
+    }
+  }
+  lines[!drop]
+}
+
 write_run_log <- function(path, config, args, timings, packages) {
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   lines <- c(
     "v1.0 run log",
-    paste("Date:", format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")),
+    paste("Date:", format(Sys.time(), "%Y-%m-%d %H:%M:%S", tz = "UTC"), "UTC"),
     paste("Command line: Rscript run_all.R", paste(args, collapse = " ")),
     "",
     "Configuration:",
@@ -379,7 +450,9 @@ write_run_log <- function(path, config, args, timings, packages) {
     }
     lines <- c(lines, "Timings:", timing_lines, "")
   }
-  lines <- c(lines, "sessionInfo():", utils::capture.output(print(utils::sessionInfo())))
+  lines <- c(lines,
+             "sessionInfo() (machine and location identifiers omitted):",
+             session_info_lines())
   writeLines(lines, path)
   invisible(path)
 }

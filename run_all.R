@@ -1,10 +1,12 @@
 # run_all.R
 #
 # Purpose: command line entry point of v1.0 (docs/v1_spec.md, section 11).
-# Builds or loads the per-drug matrices, runs the nested cross-validation of
-# every requested drug and task, writes the partition indices, the per-fold
+# Builds or loads the per-drug matrices, builds the outer folds once per drug
+# and task (written to folds.csv and passed to run_drug()), runs the nested
+# cross-validation of every requested drug and task, writes the per-fold
 # metrics, the summaries, the chosen hyperparameters, the figures and a run
-# log with sessionInfo().
+# log with the R and package versions (sessionInfo() without the operating
+# system build, locale and time zone).
 #
 # Usage (from the repository root, so that .Rprofile activates renv):
 #   Rscript run_all.R [--fast] [--drug erlotinib,paclitaxel]
@@ -234,10 +236,13 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
     drug_dir <- file.path(outdir, drug)
     dir.create(drug_dir, recursive = TRUE, showWarnings = FALSE)
     write_folds(folds_regression, folds_classification, file.path(drug_dir, "folds.csv"))
+    folds_by_task <- list(regression = folds_regression, classification = folds_classification)
     for (task in tasks) {
       t0 <- Sys.time()
       log_line("%s %s: starting %d outer splits", drug, task, config$k * config$repeats)
-      run_drug(drug, task, m, config, outdir)
+      # The same fold table that was just written: the saved indices and the
+      # evaluated folds are one object (erratum 8).
+      run_drug(drug, task, m, config, outdir, folds = folds_by_task[[task]])
       seconds <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
       timings[[paste(drug, task)]] <- seconds
       log_line("%s %s: done in %.1f s", drug, task, seconds)

@@ -1,5 +1,5 @@
 v1.0 run log
-Date: 2026-10-07 11:36:01 CEST
+Date: 2026-10-07 09:36:01 UTC
 Command line: Rscript run_all.R 
 
 Configuration:
@@ -49,21 +49,13 @@ Timings:
   paclitaxel classification: 267.5 s
   total: 2377.9 s
 
-sessionInfo():
+sessionInfo() (machine and location identifiers omitted):
 R version 4.3.2 (2023-10-31 ucrt)
 Platform: x86_64-w64-mingw32/x64 (64-bit)
-Running under: Windows 10 x64 (build 19045)
 
 Matrix products: default
 
 
-locale:
-[1] LC_COLLATE=Spanish_Spain.utf8  LC_CTYPE=Spanish_Spain.utf8   
-[3] LC_MONETARY=Spanish_Spain.utf8 LC_NUMERIC=C                  
-[5] LC_TIME=Spanish_Spain.utf8    
-
-time zone: Europe/Madrid
-tzcode source: internal
 
 attached base packages:
 [1] stats     graphics  grDevices datasets  utils     methods   base     

@@ -174,7 +174,8 @@ fitted with `ranger`, which accepts the equivalents of the h2o parameters
 directly (`mtry`, `min.node.size`, `sample.fraction` with `replace = FALSE`,
 `max.depth`, `num.trees`; `nbins` has no equivalent and is dropped), is
 deterministic given a seed and has no Java dependency. `caret` is used only
-for `createMultiFolds()`; tuning is hand-rolled around `ranger`,
+for `createMultiFolds()` (outer folds) and `createFolds()` (inner folds);
+tuning is hand-rolled around `ranger`,
 `glmnet::cv.glmnet()` and `e1071::svm()` so that the seeds, the shared inner
 folds and the saved tuning tables are explicit and tested.
 
@@ -295,7 +296,8 @@ AUC variance of unseen cell lines (best R squared 0.137 for erlotinib with the
 linear SVM, 0.111 for rapamycin with the random forest), and in
 classification most models rank the lines better than chance (ROC AUC 0.6 to
 0.7) while few beat the trivial classifier in balanced accuracy (the random
-forest and the linear SVM for erlotinib, the random forest for sunitinib).
+forest, the linear SVM, the lasso and the elastic net for erlotinib, the
+random forest for sunitinib).
 The leakage check shows that the 2019 global gene selection and threshold
 change the `glmnet` estimates by at most 0.015 in ROC AUC and 0.020 in
 R squared on these data. The comparison with the numbers of the 2019 thesis,
@@ -309,7 +311,7 @@ is not a coefficient of determination, the 2019 class label is inverted, the
 R 4.3 with a `renv` lockfile (`renv.lock`, `.Rprofile`).
 
 - v1.0: ranger (random forest), glmnet (ridge, lasso, elastic net), e1071
-  (linear SVM), pROC (ROC AUC), caret (only `createMultiFolds()`), ggplot2
+  (linear SVM), pROC (ROC AUC), caret (only `createMultiFolds()` and `createFolds()`), ggplot2
   and viridisLite (figures), data.table and readxl (reading), testthat (unit
   tests on synthetic data). No h2o, no Java.
 - Legacy scripts: caret, glmnet, randomForest, e1071, h2o (needs a Java
@@ -350,9 +352,12 @@ R 4.3 with a `renv` lockfile (`renv.lock`, `.Rprofile`).
    the results section above):
 
    ```bash
-   Rscript run_all.R --fast
+   Rscript run_all.R --fast --outdir outputs_fast
    Rscript run_all.R
    ```
+
+   The smoke run must not use the default output directory, which holds the
+   committed full-run results (`outputs_fast/` is ignored by git).
 
    Options: `--drug erlotinib,paclitaxel` (any `DRUG_NAME` of the GDSC file
    that maps to one `DRUG_ID`, case-insensitive), `--task

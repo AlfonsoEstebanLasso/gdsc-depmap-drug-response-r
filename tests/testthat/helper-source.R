@@ -83,15 +83,43 @@ quiet_small_classes <- function(expr) {
 }
 
 # Runs both tasks of the synthetic drug into outdir with the tiny
-# configuration; used by the run_drug and report tests.
+# configuration, mirroring main() of run_all.R: the outer folds are built
+# once per task, written to <outdir>/synthetic/folds.csv and passed to
+# run_drug(); used by the run_drug and report tests.
 run_synthetic_example <- function(outdir, seed = 1, leakage_check = FALSE) {
   m <- make_synthetic_matrix(seed = seed)
+  auc <- stats::setNames(as.numeric(m$auc), m$cell_lines)
+  configs <- list()
+  folds <- list()
+  for (task in c("regression", "classification")) {
+    configs[[task]] <- tiny_config(task, leakage_check = leakage_check)
+    folds[[task]] <- make_folds(auc, k = configs[[task]]$k, repeats = configs[[task]]$repeats,
+                                task = task, seed = configs[[task]]$seed + task_index(task))
+  }
+  write_folds(folds$regression, folds$classification, file.path(outdir, m$drug, "folds.csv"))
   results <- list()
   for (task in c("regression", "classification")) {
-    config <- tiny_config(task, leakage_check = leakage_check)
-    results[[task]] <- quiet_small_classes(run_drug(m$drug, task, m, config, outdir))
+    results[[task]] <- quiet_small_classes(
+      run_drug(m$drug, task, m, configs[[task]], outdir, folds = folds[[task]]))
   }
   invisible(results)
+}
+
+# Recompute the metrics of every model, repeat and fold from a predictions.csv
+# written by run_drug(), in the row order of metrics_by_fold.csv.
+metrics_from_predictions <- function(task, predictions, metrics_by_fold) {
+  rows <- lapply(seq_len(nrow(metrics_by_fold)), function(i) {
+    sel <- predictions$model == metrics_by_fold$model[i] &
+      predictions[["repeat"]] == metrics_by_fold[["repeat"]][i] &
+      predictions$fold == metrics_by_fold$fold[i]
+    p <- predictions[sel, , drop = FALSE]
+    if (task == "regression") {
+      evaluate(task, p$observed, p$predicted)
+    } else {
+      evaluate(task, p$observed, p$predicted, p$score)
+    }
+  })
+  as.data.frame(do.call(rbind, rows), check.names = FALSE)
 }
 
 task_files <- function(leakage_check = FALSE) {

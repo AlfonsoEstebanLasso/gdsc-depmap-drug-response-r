@@ -105,6 +105,64 @@ test_that("predictions, tuning, selected genes and timing are consistent", {
   }
 })
 
+test_that("the folds of folds.csv are the held-out rows of predictions.csv", {
+  saved <- read_folds(file.path(outdir, "synthetic", "folds.csv"), m$cell_lines)
+  for (task in c("regression", "classification")) {
+    pred <- read_csv_keep_names(file.path(outdir, "synthetic", task, "predictions.csv"))
+    for (model in model_names()) {
+      held_out <- pred[pred$model == model, c("cell_line", "repeat", "fold")]
+      held_out <- held_out[order(held_out[["repeat"]], held_out$fold, held_out$cell_line), ]
+      expected <- saved[[task]][, c("cell_line", "repeat", "fold")]
+      expected <- expected[order(expected[["repeat"]], expected$fold, expected$cell_line), ]
+      rownames(held_out) <- NULL
+      rownames(expected) <- NULL
+      expect_equal(held_out, expected, info = paste(task, model))
+    }
+    # The table returned by run_drug() is the one it was given.
+    expect_equal(results[[task]]$folds[, c("row", "cell_line", "repeat", "fold")],
+                 saved[[task]][, c("row", "cell_line", "repeat", "fold")])
+  }
+})
+
+test_that("run_drug refuses folds that do not match the task, the matrix or the configuration", {
+  config <- tiny_config("regression")
+  auc <- stats::setNames(as.numeric(m$auc), m$cell_lines)
+  other_task <- make_folds(auc, k = 2, repeats = 1, task = "classification", seed = 1)
+  expect_error(run_drug(m$drug, "regression", m, config, tempfile("bad"), folds = other_task),
+               "built for the task")
+  wrong_k <- make_folds(auc, k = 3, repeats = 1, task = "regression", seed = 1)
+  expect_error(run_drug(m$drug, "regression", m, config, tempfile("bad"), folds = wrong_k),
+               "repeats and folds")
+  renamed <- make_folds(auc, k = 2, repeats = 1, task = "regression", seed = 1)
+  renamed$cell_line <- rev(renamed$cell_line)
+  expect_error(run_drug(m$drug, "regression", m, config, tempfile("bad"), folds = renamed),
+               "cell lines")
+  expect_error(run_drug(m$drug, "regression", m, config, tempfile("bad"), folds = list(1)),
+               "data frame")
+})
+
+test_that("the metrics recomputed from predictions.csv equal metrics_by_fold.csv", {
+  for (task in c("regression", "classification")) {
+    task_dir <- file.path(outdir, "synthetic", task)
+    pred <- read_csv_keep_names(file.path(task_dir, "predictions.csv"))
+    mbf <- read_csv_keep_names(file.path(task_dir, "metrics_by_fold.csv"))
+    recomputed <- metrics_from_predictions(task, pred, mbf)
+    for (metric in metric_names(task)) {
+      expect_equal(recomputed[[metric]], mbf[[metric]], tolerance = 1e-12,
+                   info = paste(task, metric))
+    }
+    # The file round-trips the in-memory values exactly (17 significant digits).
+    in_memory <- results[[task]]$predictions
+    expect_identical(pred$cell_line, in_memory$cell_line)
+    if (task == "regression") {
+      expect_identical(pred$predicted, as.numeric(in_memory$predicted))
+      expect_identical(pred$observed, as.numeric(in_memory$observed))
+    } else {
+      expect_identical(pred$score, as.numeric(in_memory$score))
+    }
+  }
+})
+
 test_that("a second run with the same seed gives identical metrics_by_fold.csv", {
   outdir2 <- tempfile("v1run2")
   dir.create(outdir2)
@@ -137,7 +195,7 @@ test_that("the leakage check writes the comparison of the glmnet family", {
   expect_equal(leak$mean_fold_wise[leak$model == "ridge" & leak$metric == "auc"], ridge_auc)
 })
 
-test_that("write_run_log records the configuration, the packages and sessionInfo", {
+test_that("write_run_log records the configuration, the packages and a filtered sessionInfo", {
   path <- file.path(tempfile("log"), "run_log.txt")
   config <- tiny_config("regression")
   write_run_log(path, config, c("--fast", "--drug", "synthetic"),
@@ -150,4 +208,12 @@ test_that("write_run_log records the configuration, the packages and sessionInfo
   expect_true(any(grepl("nosuchpackage not installed", text, fixed = TRUE)))
   expect_true(any(grepl("sessionInfo()", text, fixed = TRUE)))
   expect_true(any(grepl("R version", text, fixed = TRUE)))
+  expect_true(any(grepl("^Date: [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:]{8} UTC$", text)))
+  expect_true(any(grepl("loaded via a namespace", text, fixed = TRUE)))
+  # Machine and location identifiers are not written (public repository).
+  expect_false(any(grepl("Running under:", text, fixed = TRUE)))
+  expect_false(any(grepl("locale", text, fixed = TRUE)))
+  expect_false(any(grepl("LC_", text, fixed = TRUE)))
+  expect_false(any(grepl("time zone:", text, fixed = TRUE)))
+  expect_false(any(grepl("tzcode source:", text, fixed = TRUE)))
 })

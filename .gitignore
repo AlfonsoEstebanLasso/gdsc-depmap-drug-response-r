@@ -27,3 +27,6 @@ Thumbs.db
 !outputs/**/*.csv
 outputs/**/predictions.csv
 outputs/**/models/
+
+# smoke run (Rscript run_all.R --fast --outdir outputs_fast), never committed
+outputs_fast/

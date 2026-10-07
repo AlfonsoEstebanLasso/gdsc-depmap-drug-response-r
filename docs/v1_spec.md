@@ -202,7 +202,8 @@ The 200 selected genes of every split are counted in
 v1.0 does **not** use `caret::train()`. Tuning is hand-rolled around the
 packages themselves, with the same `foldid` for every family (section 4.2):
 
-- `caret` is used only for `createMultiFolds()`.
+- `caret` is used only for `createMultiFolds()` (outer folds) and
+  `createFolds()` (inner folds).
 - `ranger` for the random forest, `glmnet::cv.glmnet()` for ridge, lasso and
   elastic net, `e1071::svm()` for the linear SVM, `pROC` for ROC AUC,
   `ggplot2` for figures, `data.table` and `readxl` for reading.
@@ -442,6 +443,7 @@ package), and calls `load_drug_matrix()`, `run_drug()` and `make_report()`.
 Rscript run_all.R [--fast] [--drug erlotinib,paclitaxel] [--task regression|classification|both]
                   [--outdir outputs] [--seed 2019] [--folds 5] [--repeats 3] [--inner-folds 5]
                   [--rf-budget 12] [--threads N] [--no-leakage-check] [--refresh-cache]
+                  [--save-models]
 ```
 
 - `--fast`: the `--fast` column of section 4.1; explicit arguments override
@@ -453,11 +455,15 @@ Rscript run_all.R [--fast] [--drug erlotinib,paclitaxel] [--task regression|clas
 - `--outdir`: default `outputs`; created if missing; existing files of the
   same drug and task are overwritten.
 - `--threads`: default `max(1, parallel::detectCores() - 1)`.
+- `--save-models`: writes the fitted objects per fold under
+  `outputs/<drug>/<task>/models/` (ignored by git).
 - Exit code 0 on success, 1 on any error (R's default for `stop()`); missing
   raw files produce an error that points to `scripts/00_download_data.R`.
 
-Full run: `Rscript run_all.R`. Tests: `Rscript -e
-"testthat::test_dir('tests/testthat')"`.
+Smoke run: `Rscript run_all.R --fast --outdir outputs_fast`. The smoke run
+must not use the default output directory, which holds the committed
+full-run results (`outputs_fast/` is ignored by git). Full run: `Rscript
+run_all.R`. Tests: `Rscript -e "testthat::test_dir('tests/testthat')"`.
 
 ## 12. Output naming scheme
 
@@ -537,7 +543,9 @@ values written in `default_config()` are the ones finally used, so that
 `Rscript run_all.R` reproduces the committed outputs.
 
 `--fast` exists for smoke runs and for the first timing; its outputs are not
-committed.
+committed. The smoke run must not use the default output directory, which
+holds the committed full-run results: `Rscript run_all.R --fast --outdir
+outputs_fast` (`outputs_fast/` is ignored by git).
 
 ## 15. Tests (`tests/testthat/`)
 
@@ -588,7 +596,7 @@ Filled after the full run.
 | Wall time of `--fast` and of the full run | `--fast` 1.2 minutes (71.7 s); full run 39.6 minutes (2377.9 s, of which 253 to 412 s per drug and task, inner loop and leakage check included, plus the report) |
 | Threads | 11 (`parallel::detectCores() - 1` on a 12 logical core desktop) |
 | `ranger`, `glmnet`, `e1071`, `pROC`, `caret` versions | 0.18.0, 4.1.8, 1.7.14, 1.18.5, 6.0.94 (from `renv.lock`) |
-| Tests passed | 555 expectations in 7 files, 0 failures (`testthat` 3.3.2) |
+| Tests passed | 591 expectations in 7 files, 0 failures (`testthat` 3.3.2), after the review fixes of the folds, the predictions round trip and the run log |
 
 Choices recorded by the builders where the specification left room or was
 adjusted:
@@ -614,6 +622,17 @@ adjusted:
   stops with fewer than three folds.
 - `renv::install("testthat")` upgraded `R6`, `cli`, `jsonlite`, `rlang` and
   `withr` in the project library; `renv.lock` records the new versions.
+- `run_log.txt` reproduces `sessionInfo()` without the operating system
+  build, the locale and the time zone lines, and dates the run in UTC: these
+  are machine and location identifiers that add nothing to reproducibility
+  beyond the R and package versions, and the repository is public.
+- The outer folds are built once per drug and task in `run_all.R`, written
+  to `folds.csv` and passed to `run_drug()` as the same object, so the saved
+  indices cannot diverge from the evaluated folds; `run_drug()` builds them
+  itself only when called without `folds` (tests and interactive use).
+- `predictions.csv` writes its numeric columns with 17 significant digits,
+  so that the metrics recomputed from the file equal `metrics_by_fold.csv`
+  (tested); `write.csv`'s default 15 digits could tie two scores.
 
 ## 18. Material for `docs/comparison_2019_vs_v1.md`
 

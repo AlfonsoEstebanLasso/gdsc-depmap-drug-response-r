@@ -52,7 +52,8 @@ Other differences that are not errata: v1.0 replaces the two 2019 splits by
 repeated stratified 5-fold cross-validation with 3 repeats (3 folds and 1
 repeat with `--fast`), tunes every model with the same inner 5-fold
 resampling, standardises the selected genes with training-fold parameters,
-drops the upper SVM costs (100 and 1000, never selected in 2019) and reports
+drops the SVM cost 1000 in both tasks and the cost 100 in regression (never
+selected in 2019), adds the cost 0.01 and reports
 per-fold metrics with a mean and a t-based 95 percent interval.
 
 ## 3. The 2019 numbers as reported in the thesis
@@ -86,7 +87,7 @@ additional observations of `docs/errata.md`). The headline value of the
 abstract, 87.64 percent for erlotinib, is the 60/20/20 lasso logistic model.
 The thesis gives no ROC AUC values, only curves.
 
-### 3.2 Regression, "R2" as computed in 2019 (pages 40 to 61; not a coefficient of determination)
+### 3.2 Regression, "R2" as computed in 2019 (pages 41 to 62; not a coefficient of determination)
 
 | Model (2019 label) | Split | Erlotinib | Rapamycin | Sunitinib | Paclitaxel |
 |---|---|---|---|---|---|
@@ -213,7 +214,7 @@ full run of 2026-10-07 with the defaults `k = 5`, `repeats = 3`, `k_inner =
 5` and `rf_budget = 12`, no lever of section 14 of the specification applied,
 39.6 minutes of wall time with 11 `ranger` threads (the `--fast` smoke run
 took 1.2 minutes); `ranger` 0.18.0, `glmnet` 4.1.8, `e1071` 1.7.14, `pROC`
-1.18.5 and `caret` 6.0.94 as recorded in `renv.lock`; 555 unit tests passed.
+1.18.5 and `caret` 6.0.94 as recorded in `renv.lock`; 591 unit tests passed.
 
 ## 5. Leakage check (erratum 6, quantification)
 

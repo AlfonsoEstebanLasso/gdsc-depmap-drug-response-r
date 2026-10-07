@@ -10,7 +10,8 @@
 #   or a factor with levels resistant and sensitive), the inner fold vector
 #   foldid shared by every family, a grid from model_grid() and the split seed.
 # Outputs: fit_model() returns the fitted object, the chosen hyperparameters
-#   (best), the search table (tuning, one inner score per candidate) and the
+#   (best, which also carries inner_score, the inner score of the chosen
+#   candidate), the search table (tuning, one inner score per candidate) and the
 #   elapsed seconds; predict_model() returns a numeric vector (regression) or
 #   list(prob, class, score) (classification).
 # Transformations: the SVM regression centres and scales the training
@@ -190,7 +191,8 @@ fit_rf <- function(x_train, y_train, task, foldid, grid, seed, threads) {
   fit <- fit_ranger(x_train, y_train, args)
   best <- list(mtry = args$mtry, min.node.size = args$min.node.size,
                sample.fraction = args$sample.fraction, max.depth = args$max.depth,
-               num.trees = args$num.trees)
+               num.trees = args$num.trees,
+               inner_score = tuning$inner_score[i_best])
   list(fit = fit, best = best, tuning = tuning)
 }
 
@@ -234,8 +236,12 @@ fit_glmnet_family <- function(x_train, y_train, task, foldid, grid, seed) {
   lower_better <- if (task == "regression") TRUE else !all(tuning$measure == "auc")
   i_best <- if (lower_better) which.min(tuning$inner_score) else which.max(tuning$inner_score)
   fit <- fits[[i_best]]
+  # inner_score is the score of the chosen candidate, so that the runner
+  # reports it as such whatever the measure (AUC, or deviance when glmnet
+  # falls back on small inner folds) without recomputing min or max.
   best <- list(alpha = tuning$alpha[i_best], lambda = fit$lambda.min,
-               lambda_rule = "lambda.min")
+               lambda_rule = "lambda.min",
+               inner_score = tuning$inner_score[i_best])
   list(fit = fit, best = best, tuning = tuning)
 }
 
@@ -313,12 +319,14 @@ fit_svm_linear <- function(x_train, y_train, task, foldid, grid, seed) {
   i_best <- best_candidate(tuning$inner_score, task)
   if (task == "regression") {
     obj <- fit_svm_regression(x_train, y_train, grid$cost[i_best], grid$epsilon[i_best])
-    best <- list(cost = grid$cost[i_best], epsilon = grid$epsilon[i_best])
+    best <- list(cost = grid$cost[i_best], epsilon = grid$epsilon[i_best],
+                 inner_score = tuning$inner_score[i_best])
     return(list(fit = obj$fit, best = best, tuning = tuning,
                 y_center = obj$y_center, y_scale = obj$y_scale))
   }
   fit <- fit_svm_classification(x_train, y_train, grid$cost[i_best])
-  list(fit = fit, best = list(cost = grid$cost[i_best]), tuning = tuning)
+  best <- list(cost = grid$cost[i_best], inner_score = tuning$inner_score[i_best])
+  list(fit = fit, best = best, tuning = tuning)
 }
 
 # --- public interface ------------------------------------------------------

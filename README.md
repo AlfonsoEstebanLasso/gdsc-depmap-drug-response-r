@@ -495,12 +495,22 @@ is not redistributed here.
 ## How to cite
 
 Use the metadata in `CITATION.cff` (GitHub shows a "Cite this repository"
-button) and cite the thesis:
+button) or the references below. Cite the thesis the code comes from and,
+if you use the code, its archived version on Zenodo:
 
 Esteban Lasso, A. (2019). *Predicción de respuesta a fármacos
 quimioterapéuticos a partir de datos genómicos*. Master's thesis, Universitat
 Oberta de Catalunya and Universitat de Barcelona.
 <https://hdl.handle.net/10609/97486>
+
+Esteban Lasso, A. (2026). *Drug response prediction in cancer cell lines
+(GDSC v17.3 and DepMap 19Q1): random forest, penalized regression and linear
+SVM in R, with reproducible data download, renv environment, errata and a
+corrected reimplementation (v1.0)* (v1.0.0) [Computer software]. Zenodo.
+<https://doi.org/10.5281/zenodo.23211591>
+
+The DOI <https://doi.org/10.5281/zenodo.23211590> resolves to the latest
+version.
 
 ## Acknowledgements
 

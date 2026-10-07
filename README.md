@@ -68,7 +68,9 @@ everything under `data/` except its README is ignored by git.
   `DepMap-2019q1-celllines.csv`, CC BY 4.0. These two files are not in the
   figshare record of the Achilles 19Q1 release; `data/README.md` explains how
   to obtain them (the [DepMap portal](https://depmap.org) or the Bioconductor
-  `depmap` package) and the script verifies them once placed in `data/raw/`.
+  `depmap` package) and the script verifies them once placed in `data/raw/`;
+  `scripts/01_depmap_from_bioconductor.R --install` rebuilds both files from
+  ExperimentHub with the same content, checked by digest (see `data/README.md`).
 
 Exit codes of the script: 0 when all three files are present and verified, 1
 when a file does not match its expected size or SHA-256 (the script stops with
@@ -333,7 +335,9 @@ R 4.3 with a `renv` lockfile (`renv.lock`, `.Rprofile`).
    ```
 
 3. Download and verify the data (the two DepMap files must be placed in
-   `data/raw/` by hand; the script says so and verifies them):
+   `data/raw/` by hand, or rebuilt from Bioconductor with
+   `Rscript scripts/01_depmap_from_bioconductor.R --install`; the download
+   script says so and verifies them):
 
    ```bash
    Rscript scripts/00_download_data.R
@@ -427,7 +431,8 @@ gdsc-depmap-drug-response-r/
 │   ├── SVMLinealcontinuos.R                            # linear SVM regression (e1071)
 │   └── SVMLinealdiscretizados.R                        # linear SVM classification (e1071)
 ├── scripts/
-│   └── 00_download_data.R                              # downloads the GDSC file, verifies size and SHA-256 of the three inputs
+│   ├── 00_download_data.R                              # downloads the GDSC file, verifies size and SHA-256 of the three inputs
+│   └── 01_depmap_from_bioconductor.R                   # rebuilds the two DepMap 19Q1 files from ExperimentHub, verified by content digest
 ├── data/
 │   ├── README.md                                       # sources, licences, expected sizes and hashes; v1.0 note on the derived cache
 │   ├── raw/                                            # input files (created locally, ignored by git)

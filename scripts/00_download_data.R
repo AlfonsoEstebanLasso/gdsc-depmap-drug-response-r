@@ -161,7 +161,7 @@ if (any(statuses == "mismatch")) {
        "expected values in this script need to be reviewed.", call. = FALSE)
 }
 if (any(statuses == "missing")) {
-  message("Some files are missing. The legacy scripts cannot run until all three files are present.")
+  message("Some files are missing. The legacy scripts cannot run until all three files are present. The two DepMap files can be rebuilt from Bioconductor with: Rscript scripts/01_depmap_from_bioconductor.R --install (see data/README.md).")
   quit(status = 2)
 }
 message("All input files are present and verified.")

@@ -74,3 +74,32 @@ rule, like `data/raw/`, and must not be committed or redistributed. The
 committed outputs of v1.0 (`outputs/`) hold only aggregate metrics, fold
 assignments (cell line names and fold numbers) and figures; the per cell line
 predictions, which carry AUC values, stay local.
+
+## Rebuilding the DepMap 19Q1 files from Bioconductor
+
+The DepMap portal serves its downloads behind an interactive check, and
+figshare does not host the 19Q1 expression release (only Achilles 19Q1 and
+the later full releases 19Q2 and 19Q3). The script
+`scripts/01_depmap_from_bioconductor.R` rebuilds the two files from
+Bioconductor's ExperimentHub records EH2264 (`TPM_19Q1`) and EH2266
+(`metadata_19Q1`) of the `depmap` package, in the layout of the portal
+files: the same 1165 cell lines and 57820 genes in the same order, with the
+same values (checked cell by cell against the files used in 2019, maximum
+absolute difference zero) and the same 982 COSMIC_ID keys. The metadata
+table from ExperimentHub lacks one line of the portal file (ACH-001825,
+without COSMIC_ID), which does not affect the join. The byte-level SHA-256
+of the portal files is not reproduced because the number formatting differs;
+the script verifies the content instead (dimensions, order of lines and
+genes, a digest of the values rounded to six decimals and a digest of the
+COSMIC_ID key) and writes `data/raw/depmap_19Q1_rebuild.txt` with the result.
+
+```bash
+Rscript scripts/01_depmap_from_bioconductor.R --install
+```
+
+`--install` installs ExperimentHub and depmap with BiocManager on first use
+(they are not part of `renv.lock`); the expression record is about 500 MB
+and is cached by ExperimentHub. Afterwards `scripts/00_download_data.R
+--verify-only data/raw` reports the two rebuilt files as mismatching the
+2019 byte-level hashes, which is expected; the legacy scripts and the v1.0
+pipeline read them identically.

@@ -1,6 +1,7 @@
 # Drug response prediction in cancer cell lines (GDSC v17.3 and DepMap 19Q1)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![DOI](https://zenodo.org/badge/1407584580.svg)](https://doi.org/10.5281/zenodo.23211590)
 ![R 4.3](https://img.shields.io/badge/R-4.3-276DC3?style=flat-square&logo=r&logoColor=white)
 ![renv](https://img.shields.io/badge/renv-lockfile-1F6FB2?style=flat-square)
 ![ranger](https://img.shields.io/badge/ranger-random%20forest-6F42C1?style=flat-square)

@@ -61,3 +61,16 @@ verifies the files already present in a directory.
 `finalmatrix.rds` to the working directory, and the model scripts write
 fitted models as `.RData`. All of them are regenerated from the inputs and
 are ignored by git.
+
+## v1.0 note: derived cache
+
+v1.0 (`run_all.R` and `R/build_matrix.R`) reads the same three input files
+from `data/raw/` and needs no new input. The first run of each drug builds
+its full cell line by gene matrix (one row per matched cell line, 57820
+genes, plus the AUC vector) and caches it as `data/derived/<drug>_matrix.rds`;
+later runs read the cache, and `--refresh-cache` rebuilds it. The cache
+contains GDSC and DepMap values, so it is ignored by git through the `data/*`
+rule, like `data/raw/`, and must not be committed or redistributed. The
+committed outputs of v1.0 (`outputs/`) hold only aggregate metrics, fold
+assignments (cell line names and fold numbers) and figures; the per cell line
+predictions, which carry AUC values, stay local.

@@ -11,6 +11,7 @@ data/*
 
 # R session artefacts
 .Rhistory
+tests/testthat/_problems/
 .Rproj.user/
 .Renviron
 
@@ -20,3 +21,9 @@ renv/library/
 # OS
 .DS_Store
 Thumbs.db
+
+# v1.0 outputs: aggregate tables, fold assignments and figures are committed;
+# per cell line predictions and fitted models are not
+!outputs/**/*.csv
+outputs/**/predictions.csv
+outputs/**/models/
